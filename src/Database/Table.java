@@ -9,26 +9,33 @@ public class Table {
     private final List<List<String>> Rows;
 
     public Table(String name, List<String> header, List<List<String>> rows) {
-        Path = "" + name + ",csv";
+        Path = System.getProperty("java.home") + name + ".csv";
         Name = name;
         Header = header;
         Rows = rows;
     }
 
-    public String getPath(){
-        return Path;
+    public String getPath(){ return Path; }
+    public String getName() { return Name; }
+    public List<String> getHeader() { return Header; }
+    public List<List<String>> getRows() { return Rows; }
+
+    public int GetHeaderIndex(String header){ return Header.indexOf(header); }
+    public String GetHeader(int index){ return Header.get(index); }
+    public List<String> GetRows(int index) { return Rows.get(index); }
+    public String GetElement(int column, int row) { return Rows.get(row).get(column); }
+
+    public int CountHeaders(){ return Header.size(); }
+    public int CountRows(){ return Rows.size(); }
+
+    public void DeleteRow(int index){
+        Rows.remove(index);
     }
 
-    public String getName() {
-        return Name;
+    public void DeleteHeader(int index){
+        Header.remove(index);
     }
-
-    public List<String> getHeader() {
-        return Header;
+    public void DeleteHeader(String header){
+        Header.remove(header.indexOf(header));
     }
-
-    public List<List<String>> getRows() {
-        return Rows;
-    }
-
 }
