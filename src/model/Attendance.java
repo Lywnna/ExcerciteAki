@@ -33,5 +33,9 @@ public class Attendance {
         }
         return ChronoUnit.MINUTES.between(entryTime, exitTime) / 60.0;
     }
-}
 
+    // ADICIONE ESTE GETTER
+    public LocalDate getDate() {
+        return date;
+    }
+}
