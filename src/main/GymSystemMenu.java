@@ -3,1224 +3,1159 @@ package main;
 import model.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
-import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class GymSystemMenu {
     private static final Scanner scanner = new Scanner(System.in);
     private static final Gym gym = new Gym();
     private static Administrator admin;
-    private static Instructor instructor;
-    private static Member member;
-    private static final List<Administrator> administrators = new ArrayList<>();
-    private static final Logger logger = Logger.getLogger(GymSystemMenu.class.getName());
-    private static Attendance currentAttendance = null; // ADICIONADO: Gerenciar attendance ativo
+    private static Instructor currentInstructor;
+    private static Member currentMember;
+    private static String currentUserType = "";
 
     public static void main(String[] args) {
-        try {
-            initializeSystem();
+        System.out.println("===================================================");
+        System.out.println("     SISTEMA DE GERENCIAMENTO - EXERCITEAKI       ");
+        System.out.println("===================================================\n");
 
-            boolean running = true;
-            while (running) {
-                try {
-                    displayMainMenu();
-                    int choice = getIntInput();
+        initializeSystem();
 
-                    switch (choice) {
-                        case 1 -> administratorMenu();
-                        case 2 -> instructorMenu();
-                        case 3 -> memberMenu();
-                        case 4 -> gymMenu();
-                        case 5 -> equipmentMenu();
-                        case 6 -> attendanceMenu();
-                        case 7 -> registerNewAdministrator();
-                        case 8 -> listAllAdministrators();
-                        case 9 -> runAutomatedTests();
-                        case 10 -> switchUserMenu();  // NOVA CHAMADA
-                        case 0 -> {
-                            running = false;
-                            System.out.println("Exiting system. Thank you!");
-                        }
-                        default -> System.out.println("Invalid option. Please try again.");
-                    }
-                } catch (Exception e) {
-                    System.out.println("Error in main menu: " + e.getMessage());
-                    scanner.nextLine();
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Critical system error: " + e.getMessage());
-            logger.log(Level.SEVERE, "Critical system error", e);
-        } finally {
+        if (!loginSystem()) {
+            System.out.println("Sistema encerrado.");
             scanner.close();
+            return;
         }
+
+        boolean running = true;
+        while (running) {
+            displayMainMenu();
+            int choice = getIntInput();
+
+            switch (choice) {
+                case 1 -> {
+                    if (isAdmin()) administratorMenu();
+                    else System.out.println("Acesso negado. Apenas administradores.");
+                }
+                case 2 -> {
+                    if (isInstructor()) instructorMenu();
+                    else System.out.println("Acesso negado. Apenas instrutores.");
+                }
+                case 3 -> {
+                    if (isMember()) memberMenu();
+                    else System.out.println("Acesso negado. Apenas alunos.");
+                }
+                case 8 -> {
+                    System.out.println("\nTrocando usuário...\n");
+                    if (!loginSystem()) {
+                        running = false;
+                    }
+                }
+                case 0 -> {
+                    running = false;
+                    System.out.println("\nSistema encerrado!");
+                }
+                default -> System.out.println("Opção inválida.");
+            }
+        }
+        scanner.close();
     }
 
     private static void initializeSystem() {
+        admin = new Administrator("Admin", "admin@exerciteaki.com", "(54) 3220-0001", "admin123");
+        System.out.println("Sistema ExerciteAki inicializado com sucesso!\n");
+    }
+
+    private static boolean loginSystem() {
+        System.out.println("===================================================");
+        System.out.println("                  LOGIN NO SISTEMA                 ");
+        System.out.println("===================================================");
+        System.out.println("1 - Administrador");
+        System.out.println("2 - Instrutor");
+        System.out.println("3 - Aluno");
+        System.out.println("4 - Criar nova conta (Aluno)");
+        System.out.println("0 - Sair");
+        System.out.print("Selecione uma opção: ");
+
+        int choice = getIntInput();
+
+        switch (choice) {
+            case 1 -> {
+                System.out.print("\nSenha do Administrador: ");
+                String password = scanner.nextLine();
+                if (admin.getPassword().equals(password)) {
+                    currentUserType = "admin";
+                    System.out.println("\nLogin realizado como Administrador!\n");
+                    return true;
+                } else {
+                    System.out.println("\nSenha incorreta!\n");
+                    return loginSystem();
+                }
+            }
+            case 2 -> {
+                if (gym.getInstructors().isEmpty()) {
+                    System.out.println("\nNenhum instrutor cadastrado!");
+                    System.out.println("Acesse a conta admin para cadastrar um instrutor!\n");
+                    return loginSystem();
+                }
+
+                System.out.print("\nEmail do Instrutor: ");
+                String email = scanner.nextLine();
+                System.out.print("Senha: ");
+                String password = scanner.nextLine();
+
+                for (Instructor inst : gym.getInstructors()) {
+                    if (inst.getEmail().equalsIgnoreCase(email) && inst.getPassword().equals(password)) {
+                        currentInstructor = inst;
+                        currentUserType = "instrutor";
+                        System.out.println("\nLogin realizado: " + inst.getName() + "\n");
+                        return true;
+                    }
+                }
+                System.out.println("\nCredenciais inválidas!\n");
+                return loginSystem();
+            }
+            case 3 -> {
+                if (gym.getMembers().isEmpty()) {
+                    System.out.println("\nNenhum aluno cadastrado!");
+                    System.out.println("Crie uma conta (opção 4).\n");
+                    return loginSystem();
+                }
+
+                System.out.print("\nEmail do Aluno: ");
+                String email = scanner.nextLine();
+                System.out.print("Senha: ");
+                String password = scanner.nextLine();
+
+                for (Member mem : gym.getMembers()) {
+                    if (mem.getEmail().equalsIgnoreCase(email) && mem.getPassword().equals(password)) {
+                        currentMember = mem;
+                        currentUserType = "member";
+                        System.out.println("\nLogin realizado: " + mem.getName() + "\n");
+                        return true;
+                    }
+                }
+                System.out.println("\nCredenciais inválidas!\n");
+                return loginSystem();
+            }
+            case 4 -> {
+                createAccount();
+                return loginSystem();
+            }
+            case 0 -> {
+                return false;
+            }
+            default -> {
+                System.out.println("\nOpção inválida!\n");
+                return loginSystem();
+            }
+        }
+    }
+
+    private static void createAccount() {
+        System.out.println("\n===================================================");
+        System.out.println("              CRIAR NOVA CONTA - ALUNO             ");
+        System.out.println("===================================================");
+
+        System.out.print("Nome Completo: ");
+        String name = scanner.nextLine().trim();
+        if (name.isEmpty()) {
+            System.out.println("\nNome não pode ser vazio!\n");
+            return;
+        }
+
+        System.out.print("Email: ");
+        String email = scanner.nextLine().trim();
+        if (email.isEmpty()) {
+            System.out.println("\nEmail não pode ser vazio!\n");
+            return;
+        }
+
+        for (Member m : gym.getMembers()) {
+            if (m.getEmail().equalsIgnoreCase(email)) {
+                System.out.println("\nEmail já cadastrado!\n");
+                return;
+            }
+        }
+
+        System.out.print("Telefone: ");
+        String phone = scanner.nextLine().trim();
+
+        System.out.print("Senha: ");
+        String password = scanner.nextLine();
+        if (password.isEmpty()) {
+            System.out.println("\nSenha não pode ser vazia!\n");
+            return;
+        }
+
+        System.out.print("Confirme a Senha: ");
+        String confirmPassword = scanner.nextLine();
+        if (!password.equals(confirmPassword)) {
+            System.out.println("\nAs senhas não coincidem!\n");
+            return;
+        }
+
+        System.out.print("Data de nascimento (dd/mm/aaaa): ");
+        String birthDateStr = scanner.nextLine().trim();
+        if (birthDateStr.isEmpty()) {
+            System.out.println("\nData inválida!\n");
+            return;
+        }
+
+        System.out.print("Altura (em metros): ");
+        double height = getDoubleInput();
+        if (height <= 0 || height > 3.0) {
+            System.out.println("\nAltura inválida!\n");
+            return;
+        }
+
         try {
-            admin = new Administrator("Admin a", "admina@gym.com", "123", "123");
-            administrators.add(admin);
+            Member member = new Member(name, email, phone, password);
+            member.setBirthDate(LocalDate.parse(birthDateStr, DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            member.setHeight(height);
+            gym.getMembers().add(member);
 
-            instructor = new Instructor("Instrutor a", "instrutora@gym.com", "123", "123", "Physical Education");
-            member = new Member("Member a", "membera@gym.com", "123", "123");
+            System.out.println("\nConta criada com sucesso! ID: " + member.getId());
+            System.out.println("Você já pode fazer login.\n");
 
-            gym.setName("Gym A");
-            gym.setPhone("1234");
-            gym.setWebsite("www.gyma.com");
-
-            Address address = new Address();
-            address.setStreet("Rua A");
-            address.setNumber("100");
-            address.setCity("Caxias do Sul");
-            address.setState("RS");
-            address.setZipCode("12345");
-            gym.setAddress(address);
-
-            gym.registerInstructor(instructor);
-            gym.registerMember(member);
-
-            System.out.println("=== Gym Management System Initialized ===");
-            System.out.println("Default Admin: " + admin.getName() + " (ID: " + admin.getId() + ")\n");
-        } catch (Exception e) {
-            System.out.println("Error initializing system: " + e.getMessage());
-            throw new RuntimeException("System initialization failed", e);
+        } catch (DateTimeParseException e) {
+            System.out.println("\nData inválida! Use dd/mm/aaaa\n");
         }
     }
 
     private static void displayMainMenu() {
-        System.out.println("\n========== GYM MANAGEMENT SYSTEM ==========");
-        System.out.println("1. Administrator Operations");
-        System.out.println("2. Instructor Operations");
-        System.out.println("3. Member Operations");
-        System.out.println("4. Gym Operations");
-        System.out.println("5. Equipment Operations");
-        System.out.println("6. Attendance Operations");
-        System.out.println("7. Register New Administrator");
-        System.out.println("8. List All Administrators");
-        System.out.println("9. Run Automated Tests");
-        System.out.println("10. Switch User");  // NOVA OPÇÃO
-        System.out.println("0. Exit");
-        System.out.print("Select option: ");
-    }
+        System.out.println("\n===================================================");
+        System.out.println("           MENU PRINCIPAL - EXERCITEAKI            ");
+        System.out.println("===================================================");
 
-    // ===== AUTOMATED TESTS =====
-    private static void runAutomatedTests() {
-        System.out.println("\n========== RUNNING AUTOMATED TESTS ==========\n");
-
-        try {
-            System.out.println("Test 1: Creating new Administrator...");
-            Administrator testAdmin = new Administrator("Test Admin", "test@gym.com", "111-222", "pass123");
-            administrators.add(testAdmin);
-            System.out.println("✓ Admin created: " + testAdmin.getName());
-
-            System.out.println("\nTest 2: Registering Instructor...");
-            Instructor testInstructor = new Instructor("Test Instructor", "inst@gym.com", "333-444", "pass123", "Certified Trainer");
-            admin.registerInstructor(gym, testInstructor);
-            System.out.println("✓ Instructor registered");
-
-            System.out.println("\nTest 3: Registering Member...");
-            Member testMember = new Member("Test Member", "member@gym.com", "555-666", "pass123");
-            admin.registerMember(gym, testMember);
-            System.out.println("✓ Member registered");
-
-            System.out.println("\nTest 4: Registering Equipment...");
-            Equipment testEquipment = new Equipment();
-            testEquipment.setName("Treadmill");
-            testEquipment.setDescription("Cardio equipment");
-            testEquipment.setFunction("Running");
-            admin.registerEquipment(gym, testEquipment);
-            System.out.println("✓ Equipment registered");
-
-            System.out.println("\nTest 5: Updating Gym Info...");
-            admin.updateGymInfo(gym, "SuperFit Gym", "999-888", "www.superfit.com");
-            System.out.println("✓ Gym info updated");
-
-            System.out.println("\nTest 6: Defining Training...");
-            Training training = new Training();
-            training.setWeekDay(Weekday.MONDAY);
-            testInstructor.defineTraining(testMember, training);
-            System.out.println("✓ Training defined for " + Weekday.MONDAY);
-
-            System.out.println("\nTest 7: Registering Progress...");
-            Progress progress = new Progress();
-            progress.setDate(LocalDate.now());
-            progress.setWeight(75.5);
-            progress.setMuscleMassPercent(30.0);
-            testInstructor.registerProgress(testMember, progress);
-            System.out.println("✓ Progress registered");
-
-            System.out.println("\nTest 8: Testing Attendance...");
-            Attendance attendance = new Attendance();
-            attendance.registerEntry();
-            Thread.sleep(1000);
-            attendance.registerExit();
-            System.out.println("✓ Attendance recorded: " + attendance.calculateHours() + " hours");
-
-            System.out.println("\nTest 9: Testing Search...");
-            Member foundMember = gym.findMemberByName("Test Member");
-            Instructor foundInstructor = gym.findInstructorByName("Test Instructor");
-            System.out.println("✓ Found member: " + (foundMember != null ? foundMember.getName() : "null"));
-            System.out.println("✓ Found instructor: " + (foundInstructor != null ? foundInstructor.getName() : "null"));
-
-            System.out.println("\nTest 10: Testing Remove Operations...");
-            admin.removeMember(gym, testMember);
-            admin.removeInstructor(gym, testInstructor);
-            admin.removeEquipment(gym, testEquipment);
-            System.out.println("✓ All test entities removed");
-
-            System.out.println("\nTest 11: Testing Login...");
-            admin.login("123");
-            System.out.println("✓ Login tested");
-
-            System.out.println("\nTest 12: Testing Update Profile...");
-            member.updateProfile("newemail@test.com", "777-888");
-            System.out.println("✓ Profile updated");
-
-            System.out.println("\nTest 13: Testing Schedule...");
-            Schedule schedule = new Schedule();
-            schedule.setOpeningTime(LocalTime.of(6, 0));
-            schedule.setClosingTime(LocalTime.of(22, 0));
-            admin.updateGymSchedule(gym, Weekday.MONDAY, schedule);
-            System.out.println("✓ Schedule set for MONDAY: 06:00 - 22:00");
-
-            System.out.println("\n========== ALL TESTS COMPLETED SUCCESSFULLY! ==========\n");
-
-        } catch (InterruptedException e) {
-            System.out.println("\n❌ TEST INTERRUPTED: " + e.getMessage());
-            Thread.currentThread().interrupt();
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("\n❌ TEST VALIDATION ERROR: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("\n❌ TEST FAILED: " + e.getMessage());
-            logger.log(Level.SEVERE, "Automated test failed", e);
+        if (isAdmin()) {
+            System.out.println("Usuário: Administrador");
+            System.out.println("1. Menu de Administrador");
+        } else if (isInstructor()) {
+            System.out.println("Usuário: " + currentInstructor.getName() + " (Instrutor)");
+            System.out.println("2. Menu de Instrutor");
+        } else if (isMember()) {
+            System.out.println("Usuário: " + currentMember.getName() + " (Aluno)");
+            System.out.println("3. Menu de Aluno");
         }
+
+        System.out.println("8. Trocar Usuário");
+        System.out.println("0. Sair do Sistema");
+        System.out.print("\nSelecione uma opção: ");
     }
 
-    // ===== SWITCH USER MENU =====
-    private static void switchUserMenu() {
-        try {
-            System.out.println("\n--- Switch User ---");
-            System.out.println("1. Switch Administrator");
-            System.out.println("2. Switch Instructor");
-            System.out.println("3. Switch Member");
-            System.out.println("4. View Current Users");
-            System.out.println("0. Back to Main Menu");
-            System.out.print("Select option: ");
-
-            int choice = getIntInput();
-
-            switch (choice) {
-                case 1 -> switchAdministrator();
-                case 2 -> switchInstructor();
-                case 3 -> switchMember();
-                case 4 -> viewCurrentUsers();
-                case 0 -> {}
-                default -> System.out.println("Invalid option.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error in switch user menu: " + e.getMessage());
-        }
+    private static boolean isAdmin() {
+        return currentUserType.equals("admin");
     }
 
-    private static void switchAdministrator() {
-        try {
-            System.out.println("\n--- Switch Administrator ---");
-            if (administrators.isEmpty()) {
-                System.out.println("No administrators available.");
-                return;
-            }
-
-            System.out.println("Available Administrators:");
-            for (int i = 0; i < administrators.size(); i++) {
-                Administrator a = administrators.get(i);
-                System.out.println((i + 1) + ". " + a.getName() + " (ID: " + a.getId() + ")" +
-                        (a == admin ? " [CURRENT]" : ""));
-            }
-
-            System.out.print("\nSelect administrator (1-" + administrators.size() + "): ");
-            int choice = getIntInput();
-
-            if (choice > 0 && choice <= administrators.size()) {
-                admin = administrators.get(choice - 1);
-                System.out.println("✓ Switched to administrator: " + admin.getName());
-            } else {
-                System.out.println("Invalid selection.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error switching administrator: " + e.getMessage());
-        }
+    private static boolean isInstructor() {
+        return currentUserType.equals("instrutor");
     }
 
-    private static void switchInstructor() {
-        try {
-            System.out.println("\n--- Switch Instructor ---");
-            if (gym.getInstructors().isEmpty()) {
-                System.out.println("No instructors available.");
-                return;
-            }
-
-            System.out.println("Available Instructors:");
-            List<Instructor> instructors = gym.getInstructors();
-            for (int i = 0; i < instructors.size(); i++) {
-                Instructor inst = instructors.get(i);
-                System.out.println((i + 1) + ". " + inst.getName() + " (ID: " + inst.getId() + ")" +
-                        (inst == instructor ? " [CURRENT]" : ""));
-            }
-
-            System.out.print("\nSelect instructor (1-" + instructors.size() + "): ");
-            int choice = getIntInput();
-
-            if (choice > 0 && choice <= instructors.size()) {
-                instructor = instructors.get(choice - 1);
-                System.out.println("✓ Switched to instructor: " + instructor.getName());
-            } else {
-                System.out.println("Invalid selection.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error switching instructor: " + e.getMessage());
-        }
+    private static boolean isMember() {
+        return currentUserType.equals("member");
     }
 
-    private static void switchMember() {
-        try {
-            System.out.println("\n--- Switch Member ---");
-            if (gym.getMembers().isEmpty()) {
-                System.out.println("No members available.");
-                return;
-            }
-
-            System.out.println("Available Members:");
-            List<Member> members = gym.getMembers();
-            for (int i = 0; i < members.size(); i++) {
-                Member m = members.get(i);
-                System.out.println((i + 1) + ". " + m.getName() + " (ID: " + m.getId() + ")" +
-                        (m == member ? " [CURRENT]" : ""));
-            }
-
-            System.out.print("\nSelect member (1-" + members.size() + "): ");
-            int choice = getIntInput();
-
-            if (choice > 0 && choice <= members.size()) {
-                member = members.get(choice - 1);
-                System.out.println("✓ Switched to member: " + member.getName());
-            } else {
-                System.out.println("Invalid selection.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error switching member: " + e.getMessage());
-        }
-    }
-
-    private static void viewCurrentUsers() {
-        try {
-            System.out.println("\n--- Current Active Users ---");
-            System.out.println("Administrator: " + admin.getName() + " (ID: " + admin.getId() + ")");
-            System.out.println("Instructor: " + instructor.getName() + " (ID: " + instructor.getId() + ")");
-            System.out.println("Member: " + member.getName() + " (ID: " + member.getId() + ")");
-        } catch (Exception e) {
-            System.out.println("Error viewing current users: " + e.getMessage());
-        }
-    }
-
-    // ===== ADMINISTRATOR REGISTRATION =====
-    private static void registerNewAdministrator() {
-        try {
-            System.out.println("\n--- Register New Administrator ---");
-            System.out.print("Name: ");
-            String name = scanner.nextLine();
-            if (name.trim().isEmpty()) {
-                System.out.println("Error: Name cannot be empty.");
-                return;
-            }
-
-            System.out.print("Email: ");
-            String email = scanner.nextLine();
-            if (email.trim().isEmpty()) {
-                System.out.println("Error: Email cannot be empty.");
-                return;
-            }
-
-            System.out.print("Phone: ");
-            String phone = scanner.nextLine();
-            System.out.print("Password: ");
-            String password = scanner.nextLine();
-            if (password.trim().isEmpty()) {
-                System.out.println("Error: Password cannot be empty.");
-                return;
-            }
-
-            Administrator newAdmin = new Administrator(name, email, phone, password);
-            administrators.add(newAdmin);
-
-            System.out.println("\n✓ Administrator registered successfully!");
-            System.out.println("ID: " + newAdmin.getId());
-            System.out.println("Name: " + newAdmin.getName());
-            System.out.println("Email: " + newAdmin.getEmail());
-
-            System.out.print("\nSet as active admin? (y/n): ");
-            String choice = scanner.nextLine();
-            if (choice.equalsIgnoreCase("y")) {
-                admin = newAdmin;
-                System.out.println("✓ Active admin changed to: " + admin.getName());
-            }
-        } catch (Exception e) {
-            System.out.println("Error registering administrator: " + e.getMessage());
-        }
-    }
-
-    private static void listAllAdministrators() {
-        try {
-            System.out.println("\n--- All Administrators ---");
-            if (administrators.isEmpty()) {
-                System.out.println("No administrators registered.");
-            } else {
-                for (Administrator a : administrators) {
-                    System.out.println("- ID: " + a.getId() +
-                            " | Name: " + a.getName() +
-                            " | Email: " + a.getEmail() +
-                            (a == admin ? " [ACTIVE]" : ""));
-                }
-                System.out.println("\nTotal: " + administrators.size() + " administrator(s)");
-            }
-        } catch (Exception e) {
-            System.out.println("Error listing administrators: " + e.getMessage());
-        }
-    }
-
-    // ===== ADMINISTRATOR MENU =====
-    private static void administratorMenu() {
-        boolean back = false;
-        while (!back) {
+    private static int getIntInput() {
+        while (true) {
             try {
-                System.out.println("\n--- Administrator Menu ---");
-                System.out.println("Current Admin: " + admin.getName());
-                System.out.println("1. Register New Instructor");
-                System.out.println("2. Register New Member");
-                System.out.println("3. Register Equipment");
-                System.out.println("4. Remove Instructor");
-                System.out.println("5. Remove Member");
-                System.out.println("6. Update Gym Info");
-                System.out.println("7. Update Gym Schedule");
-                System.out.println("8. Admin Login Test");
-                System.out.println("9. Switch Active Admin");
-                System.out.println("0. Back to Main Menu");
-                System.out.print("Select option: ");
-
-                int choice = getIntInput();
-
-                switch (choice) {
-                    case 1 -> registerNewInstructor();
-                    case 2 -> registerNewMember();
-                    case 3 -> registerEquipment();
-                    case 4 -> removeInstructor();
-                    case 5 -> removeMember();
-                    case 6 -> updateGymInfo();
-                    case 7 -> updateGymSchedule();
-                    case 8 -> testAdminLogin();
-                    case 9 -> switchActiveAdmin();
-                    case 0 -> back = true;
-                    default -> System.out.println("Invalid option.");
+                if (scanner.hasNextInt()) {
+                    int input = scanner.nextInt();
+                    scanner.nextLine();
+                    return input;
+                } else {
+                    System.out.print("Entrada inválida. Digite um número: ");
+                    scanner.nextLine();
                 }
             } catch (Exception e) {
-                System.out.println("Error in administrator menu: " + e.getMessage());
+                System.out.print("Erro. Tente novamente: ");
                 scanner.nextLine();
             }
         }
     }
 
-    private static void switchActiveAdmin() {
-        try {
-            System.out.println("\n--- Switch Active Administrator ---");
-            listAllAdministrators();
-            System.out.print("\nEnter Admin ID to set as active: ");
-            long id = Long.parseLong(scanner.nextLine());
-
-            for (Administrator a : administrators) {
-                if (a.getId() == id) {
-                    admin = a;
-                    System.out.println("✓ Active admin changed to: " + admin.getName());
-                    return;
+    private static double getDoubleInput() {
+        while (true) {
+            try {
+                String input = scanner.nextLine().replace(',', '.').trim();
+                if (input.isEmpty()) {
+                    System.out.print("Entrada vazia. Digite um número: ");
+                    continue;
                 }
+                return Double.parseDouble(input);
+            } catch (NumberFormatException e) {
+                System.out.print("Entrada inválida. Digite um número decimal: ");
             }
-            System.out.println("Administrator with ID " + id + " not found.");
-        } catch (NumberFormatException e) {
-            System.out.println("Error: Invalid ID format. Please enter a number.");
-        } catch (Exception e) {
-            System.out.println("Error switching admin: " + e.getMessage());
         }
     }
 
-    private static void registerNewInstructor() {
-        try {
-            System.out.println("\n--- Register New Instructor ---");
-            System.out.print("Name: ");
-            String name = scanner.nextLine();
-            if (name.trim().isEmpty()) throw new IllegalArgumentException("Name cannot be empty");
+    // ===== MENU ADMINISTRADOR =====
+    private static void administratorMenu() {
+        boolean back = false;
+        while (!back) {
+            System.out.println("\n===================================================");
+            System.out.println("         MENU ADMINISTRADOR - EXERCITEAKI          ");
+            System.out.println("===================================================");
+            System.out.println("1. Cadastrar Dados da Academia");
+            System.out.println("2. Atualizar Horários de Funcionamento");
+            System.out.println("3. Cadastrar Instrutor");
+            System.out.println("4. Alterar Dados de Instrutor");
+            System.out.println("5. Excluir Instrutor");
+            System.out.println("6. Consultar Instrutor (por código ou nome)");
+            System.out.println("7. Cadastrar Aluno");
+            System.out.println("8. Alterar Dados de Aluno");
+            System.out.println("9. Excluir Aluno");
+            System.out.println("10. Consultar Aluno (por código ou nome)");
+            System.out.println("11. Cadastrar Aparelho");
+            System.out.println("12. Alterar Dados de Aparelho");
+            System.out.println("13. Excluir Aparelho");
+            System.out.println("14. Consultar Aparelho");
+            System.out.println("15. Visualizar Dados da Academia");
+            System.out.println("0. Voltar ao Menu Principal");
+            System.out.print("\nSelecione uma opção: ");
 
-            System.out.print("Email: ");
-            String email = scanner.nextLine();
-            if (email.trim().isEmpty()) throw new IllegalArgumentException("Email cannot be empty");
+            int choice = getIntInput();
 
-            System.out.print("Phone: ");
-            String phone = scanner.nextLine();
-            System.out.print("Password: ");
-            String password = scanner.nextLine();
-            if (password.trim().isEmpty()) throw new IllegalArgumentException("Password cannot be empty");
-
-            System.out.print("Education: ");
-            String education = scanner.nextLine();
-            if (education.trim().isEmpty()) throw new IllegalArgumentException("Education cannot be empty");
-
-            Instructor newInstructor = new Instructor(name, email, phone, password, education);
-            admin.registerInstructor(gym, newInstructor);
-            System.out.println("✓ Instructor registered successfully!");
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error registering instructor: " + e.getMessage());
-        }
-    }
-
-    private static void registerNewMember() {
-        try {
-            System.out.println("\n--- Register New Member ---");
-            System.out.print("Name: ");
-            String name = scanner.nextLine();
-            if (name.trim().isEmpty()) throw new IllegalArgumentException("Name cannot be empty");
-
-            System.out.print("Email: ");
-            String email = scanner.nextLine();
-            if (email.trim().isEmpty()) throw new IllegalArgumentException("Email cannot be empty");
-
-            System.out.print("Phone: ");
-            String phone = scanner.nextLine();
-            System.out.print("Password: ");
-            String password = scanner.nextLine();
-            if (password.trim().isEmpty()) throw new IllegalArgumentException("Password cannot be empty");
-
-            Member newMember = new Member(name, email, phone, password);
-            admin.registerMember(gym, newMember);
-            System.out.println("✓ Member registered successfully!");
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error registering member: " + e.getMessage());
-        }
-    }
-
-    private static void registerEquipment() {
-        try {
-            System.out.println("\n--- Register Equipment ---");
-            System.out.print("Equipment Name: ");
-            String name = scanner.nextLine();
-            if (name.trim().isEmpty()) throw new IllegalArgumentException("Equipment name cannot be empty");
-
-            System.out.print("Description: ");
-            String description = scanner.nextLine();
-            System.out.print("Function: ");
-            String function = scanner.nextLine();
-
-            Equipment equipment = new Equipment();
-            equipment.setName(name);
-            equipment.setDescription(description);
-            equipment.setFunction(function);
-
-            admin.registerEquipment(gym, equipment);
-            System.out.println("✓ Equipment registered successfully!");
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error registering equipment: " + e.getMessage());
-        }
-    }
-
-    private static void removeInstructor() {
-        try {
-            System.out.println("\n--- Remove Instructor ---");
-            listAllInstructors();
-            System.out.print("\nInstructor Name to Remove: ");
-            String name = scanner.nextLine();
-            Instructor toRemove = gym.findInstructorByName(name);
-
-            if (toRemove != null) {
-                admin.removeInstructor(gym, toRemove);
-                System.out.println("✓ Instructor removed successfully!");
-            } else {
-                System.out.println("Instructor not found.");
+            switch (choice) {
+                case 1 -> updateGymData();
+                case 2 -> updateGymSchedule();
+                case 3 -> registerInstructor();
+                case 4 -> alterInstructor();
+                case 5 -> removeInstructor();
+                case 6 -> consultInstructor();
+                case 7 -> registerMember();
+                case 8 -> alterMember();
+                case 9 -> removeMember();
+                case 10 -> consultMember();
+                case 11 -> registerEquipment();
+                case 12 -> alterEquipment();
+                case 13 -> removeEquipment();
+                case 14 -> consultEquipment();
+                case 15 -> viewGymInfo();
+                case 0 -> back = true;
+                default -> System.out.println("Opção inválida.");
             }
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error removing instructor: " + e.getMessage());
         }
     }
 
-    private static void removeMember() {
-        try {
-            System.out.println("\n--- Remove Member ---");
-            listAllMembers();
-            System.out.print("\nMember Name to Remove: ");
-            String name = scanner.nextLine();
-            Member toRemove = gym.findMemberByName(name);
-
-            if (toRemove != null) {
-                admin.removeMember(gym, toRemove);
-                System.out.println("✓ Member removed successfully!");
-            } else {
-                System.out.println("Member not found.");
-            }
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error removing member: " + e.getMessage());
+    private static void updateGymData() {
+        System.out.println("\n--- CADASTRAR/ATUALIZAR DADOS DA ACADEMIA ---");
+        System.out.print("Nome: ");
+        String name = scanner.nextLine().trim();
+        if (name.isEmpty()) {
+            System.out.println("\nNome não pode ser vazio!\n");
+            return;
         }
-    }
 
-    private static void updateGymInfo() {
-        try {
-            System.out.println("\n--- Update Gym Info ---");
-            System.out.println("Current Info:");
-            gym.viewGymInfo();
-            System.out.println("\nEnter new values (press Enter to skip):");
-            System.out.print("New Name: ");
-            String name = scanner.nextLine();
-            System.out.print("New Phone: ");
-            String phone = scanner.nextLine();
-            System.out.print("New Website: ");
-            String website = scanner.nextLine();
+        System.out.print("Telefone: ");
+        String phone = scanner.nextLine().trim();
+        System.out.print("Website: ");
+        String website = scanner.nextLine().trim();
 
-            admin.updateGymInfo(gym, name.isEmpty() ? null : name,
-                    phone.isEmpty() ? null : phone,
-                    website.isEmpty() ? null : website);
-            System.out.println("✓ Gym info updated successfully!");
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error updating gym info: " + e.getMessage());
-        }
+        System.out.println("\n--- ENDEREÇO ---");
+        System.out.print("Rua: ");
+        String street = scanner.nextLine().trim();
+        System.out.print("Número: ");
+        String number = scanner.nextLine().trim();
+        System.out.print("Bairro: ");
+        String neighborhood = scanner.nextLine().trim();
+        System.out.print("Cidade: ");
+        String city = scanner.nextLine().trim();
+        System.out.print("Estado (sigla): ");
+        String state = scanner.nextLine().trim().toUpperCase();
+        System.out.print("CEP: ");
+        String zipCode = scanner.nextLine().trim();
+
+        gym.setName(name);
+        gym.setPhone(phone);
+        gym.setWebsite(website);
+
+        Address address = new Address();
+        address.setStreet(street);
+        address.setNumber(number);
+        address.setNeighborhood(neighborhood);
+        address.setCity(city);
+        address.setState(state);
+        address.setZipCode(zipCode);
+        gym.setAddress(address);
+
+        System.out.println("\nDados atualizados com sucesso!\n");
     }
 
     private static void updateGymSchedule() {
-        try {
-            System.out.println("\n--- Update Gym Schedule ---");
-            System.out.println("Select Day:");
-            for (int i = 0; i < Weekday.values().length; i++) {
-                System.out.println((i + 1) + ". " + Weekday.values()[i]);
-            }
-            System.out.print("Choice: ");
-            int dayChoice = getIntInput() - 1;
+        System.out.println("\n--- ATUALIZAR HORÁRIOS DE FUNCIONAMENTO ---");
+        Weekday[] days = Weekday.values();
+        for (int i = 0; i < days.length; i++) {
+            System.out.println((i + 1) + ". " + days[i]);
+        }
+        System.out.print("Escolha o dia (1-7): ");
+        int dayChoice = getIntInput() - 1;
 
-            if (dayChoice >= 0 && dayChoice < Weekday.values().length) {
-                System.out.print("Opening Time (HH:MM): ");
+        if (dayChoice >= 0 && dayChoice < days.length) {
+            try {
+                System.out.print("Horário de Abertura (HH:MM): ");
                 String openTime = scanner.nextLine();
-                System.out.print("Closing Time (HH:MM): ");
+                System.out.print("Horário de Fechamento (HH:MM): ");
                 String closeTime = scanner.nextLine();
 
                 Schedule schedule = new Schedule();
                 schedule.setOpeningTime(LocalTime.parse(openTime));
                 schedule.setClosingTime(LocalTime.parse(closeTime));
 
-                admin.updateGymSchedule(gym, Weekday.values()[dayChoice], schedule);
-                System.out.println("✓ Schedule updated successfully!");
-            } else {
-                System.out.println("Invalid day selection.");
+                admin.updateGymSchedule(gym, days[dayChoice], schedule);
+                System.out.println("\nHorário atualizado para " + days[dayChoice] + "!\n");
+            } catch (DateTimeParseException e) {
+                System.out.println("\nFormato inválido! Use HH:MM\n");
             }
-        } catch (DateTimeParseException e) {
-            System.out.println("Error: Invalid time format. Use HH:MM (e.g., 08:00)");
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error updating schedule: " + e.getMessage());
+        } else {
+            System.out.println("\nDia inválido!\n");
         }
     }
 
-    private static void testAdminLogin() {
+    private static void registerInstructor() {
+        System.out.println("\n--- CADASTRAR INSTRUTOR ---");
+        System.out.print("Nome: ");
+        String name = scanner.nextLine().trim();
+        if (name.isEmpty()) {
+            System.out.println("\nNome não pode ser vazio!\n");
+            return;
+        }
+
+        System.out.print("Email: ");
+        String email = scanner.nextLine().trim();
+        if (email.isEmpty()) {
+            System.out.println("\nEmail não pode ser vazio!\n");
+            return;
+        }
+
+        for (Instructor i : gym.getInstructors()) {
+            if (i.getEmail().equalsIgnoreCase(email)) {
+                System.out.println("\nEmail já cadastrado!\n");
+                return;
+            }
+        }
+
+        System.out.print("Telefone: ");
+        String phone = scanner.nextLine().trim();
+
+        System.out.print("Senha: ");
+        String password = scanner.nextLine();
+        if (password.isEmpty()) {
+            System.out.println("\nSenha não pode ser vazia!\n");
+            return;
+        }
+
+        System.out.print("Formação Acadêmica: ");
+        String education = scanner.nextLine().trim();
+        if (education.isEmpty()) {
+            System.out.println("\nFormação não pode ser vazia!\n");
+            return;
+        }
+
+        Instructor instructor = new Instructor(name, email, phone, password, education);
+        admin.registerInstructor(gym, instructor);
+        System.out.println("\nInstrutor cadastrado! ID: " + instructor.getId() + "\n");
+    }
+
+    private static void alterInstructor() {
+        System.out.println("\n--- ALTERAR DADOS DE INSTRUTOR ---");
+        Instructor inst = findInstructor();
+        if (inst != null) {
+            System.out.println("Dados atuais: " + inst.getName() + " | " + inst.getEmail());
+            System.out.print("Novo Email (Enter para manter): ");
+            String email = scanner.nextLine().trim();
+            System.out.print("Novo Telefone (Enter para manter): ");
+            String phone = scanner.nextLine().trim();
+            System.out.print("Nova Formação (Enter para manter): ");
+            String education = scanner.nextLine().trim();
+
+            if (!email.isEmpty()) inst.setEmail(email);
+            if (!phone.isEmpty()) inst.setPhone(phone);
+            if (!education.isEmpty()) inst.setEducation(education);
+
+            System.out.println("\nDados alterados!\n");
+        }
+    }
+
+    private static void removeInstructor() {
+        System.out.println("\n--- EXCLUIR INSTRUTOR ---");
+        Instructor inst = findInstructor();
+        if (inst != null) {
+            admin.removeInstructor(gym, inst);
+            System.out.println("\nInstrutor removido!\n");
+        }
+    }
+
+    private static void consultInstructor() {
+        System.out.println("\n--- CONSULTAR INSTRUTOR ---");
+        Instructor inst = findInstructor();
+        if (inst != null) {
+            System.out.println("\n=== DADOS DO INSTRUTOR ===");
+            System.out.println("ID: " + inst.getId());
+            System.out.println("Nome: " + inst.getName());
+            System.out.println("Email: " + inst.getEmail());
+            System.out.println("Telefone: " + inst.getPhone());
+            System.out.println("Formação: " + inst.getEducation());
+            System.out.println("Treinos Definidos: " + inst.getDefinedTrainings().size());
+        }
+    }
+
+    private static Instructor findInstructor() {
+        System.out.println("1. Buscar por Código (ID)");
+        System.out.println("2. Buscar por Nome");
+        System.out.print("Escolha: ");
+        int choice = getIntInput();
+
+        if (choice == 1) {
+            System.out.print("ID: ");
+            long id = Long.parseLong(scanner.nextLine());
+            for (Instructor i : gym.getInstructors()) {
+                if (i.getId() == id) return i;
+            }
+            System.out.println("\nInstrutor com ID " + id + " não encontrado.\n");
+        } else if (choice == 2) {
+            System.out.print("Nome: ");
+            String name = scanner.nextLine();
+            Instructor found = gym.findInstructorByName(name);
+            if (found != null) return found;
+            System.out.println("\nInstrutor '" + name + "' não encontrado.\n");
+        }
+        return null;
+    }
+
+    private static void registerMember() {
+        System.out.println("\n--- CADASTRAR ALUNO ---");
+        System.out.print("Nome: ");
+        String name = scanner.nextLine().trim();
+        if (name.isEmpty()) {
+            System.out.println("\nNome não pode ser vazio!\n");
+            return;
+        }
+
+        System.out.print("Email: ");
+        String email = scanner.nextLine().trim();
+        if (email.isEmpty()) {
+            System.out.println("\nEmail não pode ser vazio!\n");
+            return;
+        }
+
+        for (Member m : gym.getMembers()) {
+            if (m.getEmail().equalsIgnoreCase(email)) {
+                System.out.println("\nEmail já cadastrado!\n");
+                return;
+            }
+        }
+
+        System.out.print("Telefone: ");
+        String phone = scanner.nextLine().trim();
+
+        System.out.print("Senha: ");
+        String password = scanner.nextLine();
+        if (password.isEmpty()) {
+            System.out.println("\nSenha não pode ser vazia!\n");
+            return;
+        }
+
+        System.out.print("Data de Nascimento (dd/mm/aaaa): ");
+        String birthDateStr = scanner.nextLine().trim();
+        if (birthDateStr.isEmpty()) {
+            System.out.println("\nData inválida!\n");
+            return;
+        }
+
+        System.out.print("Altura (em metros): ");
+        double height = getDoubleInput();
+        if (height <= 0 || height > 3.0) {
+            System.out.println("\nAltura inválida!\n");
+            return;
+        }
+
         try {
-            System.out.println("\n--- Test Admin Login ---");
-            System.out.print("Enter password: ");
-            String password = scanner.nextLine();
-            admin.login(password);
-        } catch (Exception e) {
-            System.out.println("Error during login: " + e.getMessage());
+            Member member = new Member(name, email, phone, password);
+            member.setBirthDate(LocalDate.parse(birthDateStr, DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            member.setHeight(height);
+            admin.registerMember(gym, member);
+            System.out.println("\nAluno cadastrado! ID: " + member.getId());
+        } catch (DateTimeParseException e) {
+            System.out.println("\nData inválida! Use dd/mm/aaaa\n");
         }
     }
 
-    // ===== INSTRUCTOR MENU =====
+    private static void alterMember() {
+        System.out.println("\n--- ALTERAR DADOS DE ALUNO ---");
+        Member mem = findMember();
+        if (mem != null) {
+            System.out.println("Dados atuais: " + mem.getName() + " | " + mem.getEmail());
+            System.out.print("Novo Email (Enter para manter): ");
+            String email = scanner.nextLine().trim();
+            System.out.print("Novo Telefone (Enter para manter): ");
+            String phone = scanner.nextLine().trim();
+
+            mem.updateProfile(email.isEmpty() ? null : email, phone.isEmpty() ? null : phone);
+            System.out.println("\nDados alterados!\n");
+        }
+    }
+
+    private static void removeMember() {
+        System.out.println("\n--- EXCLUIR ALUNO ---");
+        Member mem = findMember();
+        if (mem != null) {
+            admin.removeMember(gym, mem);
+            System.out.println("\nAluno removido!\n");
+        }
+    }
+
+    private static void consultMember() {
+        System.out.println("\n--- CONSULTAR ALUNO ---");
+        Member mem = findMember();
+        if (mem != null) {
+            System.out.println("\n=== DADOS DO ALUNO ===");
+            System.out.println("ID: " + mem.getId());
+            System.out.println("Nome: " + mem.getName());
+            System.out.println("Email: " + mem.getEmail());
+            System.out.println("Telefone: " + mem.getPhone());
+            if (mem.getBirthDate() != null) {
+                System.out.println("Data Nascimento: " + mem.getBirthDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                System.out.println("Idade: " + mem.getAge() + " anos");
+            }
+            System.out.println("Altura: " + mem.getHeight() + "m");
+            System.out.println("Total de Presenças: " + mem.getTotalAttendances());
+        }
+    }
+
+    private static Member findMember() {
+        System.out.println("1. Buscar por Código (ID)");
+        System.out.println("2. Buscar por Nome");
+        System.out.print("Escolha: ");
+        int choice = getIntInput();
+
+        if (choice == 1) {
+            System.out.print("ID: ");
+            long id = Long.parseLong(scanner.nextLine());
+            for (Member m : gym.getMembers()) {
+                if (m.getId() == id) return m;
+            }
+            System.out.println("\nAluno com ID " + id + " não encontrado.\n");
+        } else if (choice == 2) {
+            System.out.print("Nome: ");
+            String name = scanner.nextLine();
+            Member found = gym.findMemberByName(name);
+            if (found != null) return found;
+            System.out.println("\nAluno '" + name + "' não encontrado.\n");
+        }
+        return null;
+    }
+
+    private static void registerEquipment() {
+        System.out.println("\n--- CADASTRAR APARELHO ---");
+        System.out.print("Nome: ");
+        String name = scanner.nextLine().trim();
+        if (name.isEmpty()) {
+            System.out.println("\nNome não pode ser vazio!\n");
+            return;
+        }
+
+        System.out.print("Descrição: ");
+        String description = scanner.nextLine().trim();
+        if (description.isEmpty()) {
+            System.out.println("\nDescrição não pode ser vazia!\n");
+            return;
+        }
+
+        System.out.print("Função: ");
+        String function = scanner.nextLine().trim();
+        if (function.isEmpty()) {
+            System.out.println("\nFunção não pode ser vazia!\n");
+            return;
+        }
+
+        Equipment equipment = new Equipment();
+        equipment.setName(name);
+        equipment.setDescription(description);
+        equipment.setFunction(function);
+
+        admin.registerEquipment(gym, equipment);
+        System.out.println("\nAparelho cadastrado!\n");
+    }
+
+    private static void alterEquipment() {
+        System.out.println("\n--- ALTERAR DADOS DE APARELHO ---");
+        Equipment eq = findEquipment();
+        if (eq != null) {
+            System.out.println("Dados atuais: " + eq.getName());
+            System.out.print("Nova Descrição (Enter para manter): ");
+            String desc = scanner.nextLine().trim();
+            System.out.print("Nova Função (Enter para manter): ");
+            String func = scanner.nextLine().trim();
+
+            if (!desc.isEmpty() || !func.isEmpty()) {
+                eq.updateData(desc.isEmpty() ? null : desc, func.isEmpty() ? null : func);
+                System.out.println("\nDados alterados!\n");
+            }
+        }
+    }
+
+    private static void removeEquipment() {
+        System.out.println("\n--- EXCLUIR APARELHO ---");
+        Equipment eq = findEquipment();
+        if (eq != null) {
+            admin.removeEquipment(gym, eq);
+            System.out.println("\nAparelho removido!\n");
+        }
+    }
+
+    private static void consultEquipment() {
+        System.out.println("\n--- CONSULTAR APARELHO ---");
+        Equipment eq = findEquipment();
+        if (eq != null) {
+            System.out.println("\n=== DADOS DO APARELHO ===");
+            System.out.println("Nome: " + eq.getName());
+            System.out.println("Descrição: " + eq.getDescription());
+            System.out.println("Função: " + eq.getFunction());
+        }
+    }
+
+    private static Equipment findEquipment() {
+        System.out.print("Nome do Aparelho: ");
+        String name = scanner.nextLine().trim();
+        for (Equipment e : gym.getEquipments()) {
+            if (e.getName().equalsIgnoreCase(name)) return e;
+        }
+        System.out.println("\nAparelho '" + name + "' não encontrado.\n");
+        return null;
+    }
+
+    private static void viewGymInfo() {
+        gym.viewGymInfo();
+    }
+
+    // ===== MENU INSTRUTOR =====
     private static void instructorMenu() {
         boolean back = false;
         while (!back) {
-            try {
-                System.out.println("\n--- Instructor Menu ---");
-                System.out.println("Current Instructor: " + instructor.getName());
-                System.out.println("1. Define Training for Member");
-                System.out.println("2. Register Member Progress");
-                System.out.println("3. View Defined Trainings");
-                System.out.println("4. Update Education");
-                System.out.println("0. Back to Main Menu");
-                System.out.print("Select option: ");
+            System.out.println("\n===================================================");
+            System.out.println("--- MENU INSTRUTOR - EXERCITEAKI ---");
+            System.out.println("===================================================");
+            System.out.println("Instrutor: " + currentInstructor.getName());
+            System.out.println("---------------------------------------------------");
+            System.out.println("1. Definir Treino para Aluno");
+            System.out.println("2. Registrar Evolução de Aluno");
+            System.out.println("3. Cadastrar Aluno");
+            System.out.println("0. Voltar ao Menu Principal");
+            System.out.print("\nSelecione uma opção: ");
 
-                int choice = getIntInput();
+            int choice = getIntInput();
 
-                switch (choice) {
-                    case 1 -> defineTraining();
-                    case 2 -> registerProgress();
-                    case 3 -> viewDefinedTrainings();
-                    case 4 -> updateEducation();
-                    case 0 -> back = true;
-                    default -> System.out.println("Invalid option.");
-                }
-            } catch (Exception e) {
-                System.out.println("Error in instructor menu: " + e.getMessage());
-                scanner.nextLine();
+            switch (choice) {
+                case 1 -> defineTraining();
+                case 2 -> registerProgressByInstructor();
+                case 3 -> registerMember();
+                case 0 -> back = true;
+                default -> System.out.println("Opção inválida.");
             }
         }
     }
 
     private static void defineTraining() {
-        try {
-            System.out.println("\n--- Define Training ---");
-            System.out.print("Member Name: ");
-            String memberName = scanner.nextLine();
-            Member targetMember = gym.findMemberByName(memberName);
+        System.out.println("\n--- DEFINIR TREINO PARA ALUNO ---");
+        System.out.print("Nome do Aluno: ");
+        String memberName = scanner.nextLine();
+        Member member = gym.findMemberByName(memberName);
 
-            if (targetMember == null) {
-                System.out.println("Member not found.");
-                return;
-            }
-
-            System.out.println("Select Weekday:");
-            for (int i = 0; i < Weekday.values().length; i++) {
-                System.out.println((i + 1) + ". " + Weekday.values()[i]);
-            }
-            System.out.print("Choice: ");
-            int dayChoice = getIntInput() - 1;
-
-            if (dayChoice < 0 || dayChoice >= Weekday.values().length) {
-                System.out.println("Invalid day selection.");
-                return;
-            }
-
-            Training training = new Training();
-            training.setWeekDay(Weekday.values()[dayChoice]);
-
-            boolean addingExercises = true;
-            int exerciseOrder = 1;
-
-            while (addingExercises) {
-                try {
-                    System.out.println("\n--- Add Exercise #" + exerciseOrder + " ---");
-
-                    if (gym.getEquipments().isEmpty()) {
-                        System.out.println("No equipment available. Please register equipment first.");
-                        break;
-                    }
-
-                    System.out.println("Available Equipment:");
-                    List<Equipment> equipments = new ArrayList<>(gym.getEquipments());
-                    for (int i = 0; i < equipments.size(); i++) {
-                        System.out.println((i + 1) + ". " + equipments.get(i).getName());
-                    }
-                    System.out.print("Select equipment (or 0 to finish): ");
-                    int equipChoice = getIntInput();
-
-                    if (equipChoice == 0) {
-                        addingExercises = false;
-                        continue;
-                    }
-
-                    if (equipChoice > 0 && equipChoice <= equipments.size()) {
-                        Equipment selectedEquipment = equipments.get(equipChoice - 1);
-
-                        System.out.print("Weight (kg): ");
-                        double weight = getDoubleInput();
-
-                        System.out.print("Repetitions: ");
-                        int reps = getIntInput();
-
-                        Exercise exercise = new Exercise();
-                        exercise.setEquipment(selectedEquipment);
-                        exercise.setWeight(weight);
-                        exercise.setRepetitions(reps);
-                        exercise.setOrder(exerciseOrder);
-
-                        training.addExercise(exercise);
-                        System.out.println("✓ Exercise added!");
-
-                        exerciseOrder++;
-
-                        System.out.print("\nAdd another exercise? (y/n): ");
-                        String choice = scanner.nextLine();
-                        if (!choice.equalsIgnoreCase("y")) {
-                            addingExercises = false;
-                        }
-                    } else {
-                        System.out.println("Invalid equipment selection.");
-                    }
-                } catch (InputMismatchException e) {
-                    System.out.println("Error: Invalid input format.");
-                    scanner.nextLine();
-                } catch (Exception e) {
-                    System.out.println("Error adding exercise: " + e.getMessage());
-                }
-            }
-
-            if (training.getExercises().isEmpty()) {
-                System.out.println("Training must have at least one exercise.");
-            } else {
-                instructor.defineTraining(targetMember, training);
-                System.out.println("\n✓ Training defined successfully for " + Weekday.values()[dayChoice]);
-                System.out.println("Total exercises: " + training.getExercises().size());
-            }
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error defining training: " + e.getMessage());
+        if (member == null) {
+            System.out.println("\nAluno não encontrado.\n");
+            return;
         }
-    }
 
-    private static void registerProgress() {
-        try {
-            System.out.println("\n--- Register Progress ---");
-            System.out.print("Member Name: ");
-            String memberName = scanner.nextLine();
-            Member targetMember = gym.findMemberByName(memberName);
+        System.out.println("\nSelecione o Dia da Semana:");
+        Weekday[] days = Weekday.values();
+        for (int i = 0; i < days.length; i++) {
+            System.out.println((i + 1) + ". " + days[i]);
+        }
+        System.out.print("Escolha (1-7): ");
+        int dayChoice = getIntInput() - 1;
 
-            if (targetMember != null) {
-                System.out.print("Weight (kg): ");
+        if (dayChoice < 0 || dayChoice >= days.length) {
+            System.out.println("\nDia inválido.\n");
+            return;
+        }
+
+        Training training = new Training();
+        training.setWeekDay(days[dayChoice]);
+
+        boolean addingExercises = true;
+        int exerciseOrder = 1;
+
+        while (addingExercises) {
+            System.out.println("\n--- Adicionar Exercício #" + exerciseOrder + " ---");
+
+            if (gym.getEquipments().isEmpty()) {
+                System.out.println("Nenhum aparelho cadastrado!");
+                break;
+            }
+
+            System.out.println("Aparelhos Disponíveis:");
+            List<Equipment> equipments = new ArrayList<>(gym.getEquipments());
+            for (int i = 0; i < equipments.size(); i++) {
+                System.out.println((i + 1) + ". " + equipments.get(i).getName());
+            }
+            System.out.print("Selecione (ou 0 para finalizar): ");
+            int equipChoice = getIntInput();
+
+            if (equipChoice == 0) break;
+
+            if (equipChoice > 0 && equipChoice <= equipments.size()) {
+                Equipment selectedEquipment = equipments.get(equipChoice - 1);
+
+                System.out.print("Carga (kg): ");
                 double weight = getDoubleInput();
-                System.out.print("Muscle Mass Percent: ");
-                double muscleMass = getDoubleInput();
 
-                Progress progress = new Progress();
-                progress.setDate(LocalDate.now());
-                progress.setWeight(weight);
-                progress.setMuscleMassPercent(muscleMass);
+                System.out.print("Repetições: ");
+                int reps = getIntInput();
 
-                instructor.registerProgress(targetMember, progress);
-                System.out.println("✓ Progress registered successfully!");
+                Exercise exercise = new Exercise();
+                exercise.setEquipment(selectedEquipment);
+                exercise.setWeight(weight);
+                exercise.setRepetitions(reps);
+                exercise.setOrder(exerciseOrder);
+
+                training.addExercise(exercise);
+                System.out.println("Exercício adicionado!");
+
+                exerciseOrder++;
+
+                System.out.print("\nAdicionar outro? (s/n): ");
+                String choice = scanner.nextLine();
+                if (!choice.equalsIgnoreCase("s")) {
+                    addingExercises = false;
+                }
             } else {
-                System.out.println("Member not found.");
+                System.out.println("Seleção inválida.");
             }
-        } catch (InputMismatchException e) {
-            System.out.println("Error: Invalid number format.");
-            scanner.nextLine();
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error registering progress: " + e.getMessage());
+        }
+
+        if (training.getExercises().isEmpty()) {
+            System.out.println("\nTreino precisa ter pelo menos um exercício.\n");
+        } else {
+            currentInstructor.defineTraining(member, training);
+            System.out.println("\nTreino definido para " + days[dayChoice] + "!");
+            System.out.println("Total: " + training.getExercises().size() + " exercício(s)\n");
         }
     }
 
-    private static void viewDefinedTrainings() {
-        try {
-            System.out.println("\n--- Defined Trainings ---");
-            System.out.println("Total trainings: " + instructor.getDefinedTrainings().size());
-            for (Training t : instructor.getDefinedTrainings()) {
-                System.out.println("- " + t.getWeekDay() + " (" + t.getExercises().size() + " exercises)");
-            }
-        } catch (Exception e) {
-            System.out.println("Error viewing trainings: " + e.getMessage());
+    private static void registerProgressByInstructor() {
+        System.out.println("\n--- REGISTRAR EVOLUÇÃO DO ALUNO ---");
+        System.out.print("Nome do Aluno: ");
+        String memberName = scanner.nextLine();
+        Member member = gym.findMemberByName(memberName);
+
+        if (member == null) {
+            System.out.println("\nAluno não encontrado.\n");
+            return;
         }
+
+        System.out.print("Peso (kg): ");
+        double weight = getDoubleInput();
+
+        System.out.print("Percentual de Massa Muscular: ");
+        double muscleMass = getDoubleInput();
+
+        Progress progress = new Progress();
+        progress.setDate(LocalDate.now());
+        progress.setWeight(weight);
+        progress.setMuscleMassPercent(muscleMass);
+
+        currentInstructor.registerProgress(member, progress);
+        System.out.println("\nEvolução registrada com sucesso!\n");
     }
 
-    private static void updateEducation() {
-        try {
-            System.out.println("\n--- Update Education ---");
-            System.out.print("New Education: ");
-            String education = scanner.nextLine();
-            if (education.trim().isEmpty()) {
-                System.out.println("Error: Education cannot be empty.");
-                return;
-            }
-            instructor.setEducation(education);
-            System.out.println("✓ Education updated successfully!");
-        } catch (IllegalArgumentException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error updating education: " + e.getMessage());
-        }
-    }
-
-    // ===== MEMBER MENU =====
+    // MENU ALUNO
     private static void memberMenu() {
         boolean back = false;
         while (!back) {
-            try {
-                System.out.println("\n--- Member Menu ---");
-                System.out.println("Current Member: " + member.getName());
-                System.out.println("1. View Training for Day");
-                System.out.println("2. View Progress History");
-                System.out.println("3. Register Entry");
-                System.out.println("4. Register Exit");
-                System.out.println("5. Update Profile");
-                System.out.println("6. View Attendance History");
-                System.out.println("0. Back to Main Menu");
-                System.out.print("Select option: ");
-
-                int choice = getIntInput();
-
-                switch (choice) {
-                    case 1 -> viewTrainingForDay();
-                    case 2 -> viewProgressHistory();
-                    case 3 -> registerEntry();
-                    case 4 -> registerExit();
-                    case 5 -> updateMemberProfile();
-                    case 6 -> viewAttendanceHistory();
-                    case 0 -> back = true;
-                    default -> System.out.println("Invalid option.");
-                }
-            } catch (Exception e) {
-                System.out.println("Error in member menu: " + e.getMessage());
-                scanner.nextLine();
-            }
-        }
-    }
-
-    private static void viewTrainingForDay() {
-        try {
-            System.out.println("\n--- View Training ---");
-            System.out.println("Select Day:");
-            for (int i = 0; i < Weekday.values().length; i++) {
-                System.out.println((i + 1) + ". " + Weekday.values()[i]);
-            }
-            System.out.print("Choice: ");
-            int dayChoice = getIntInput() - 1;
-
-            if (dayChoice >= 0 && dayChoice < Weekday.values().length) {
-                Training training = member.viewTraining(Weekday.values()[dayChoice]);
-                if (training != null) {
-                    training.generateReport();
-                } else {
-                    System.out.println("No training scheduled for this day.");
-                }
-            } else {
-                System.out.println("Invalid day selection.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error viewing training: " + e.getMessage());
-        }
-    }
-
-    private static void viewAttendanceHistory() {
-        try {
-            System.out.println("\n--- Attendance History ---");
-            List<Attendance> attendances = member.viewAttendances();
-
-            if (attendances.isEmpty()) {
-                System.out.println("No attendance records yet.");
-            } else {
-                System.out.println("Total attendances: " + member.getTotalAttendances());
-                System.out.println("Total hours this month: " + String.format("%.2f", member.getTotalHoursThisMonth()) + " hours");
-                System.out.println("\nRecent attendances:");
-
-                for (int i = attendances.size() - 1; i >= Math.max(0, attendances.size() - 10); i--) {
-                    Attendance a = attendances.get(i);
-                    try {
-                        System.out.println("- Date: " + a.getDate() + " | Hours: " + String.format("%.2f", a.calculateHours()));
-                    } catch (Exception e) {
-                        System.out.println("- Date: " + a.getDate() + " | Incomplete record");
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error viewing attendance history: " + e.getMessage());
-        }
-    }
-
-    private static void viewProgressHistory() {
-        try {
-            System.out.println("\n--- Progress History ---");
-            if (member.viewProgress().isEmpty()) {
-                System.out.println("No progress records yet.");
-            } else {
-                for (Progress p : member.viewProgress()) {
-                    System.out.println("Date: " + p.getDate() +
-                            " | Weight: " + p.getWeight() + "kg" +
-                            " | Muscle Mass: " + p.getMuscleMassPercent() + "%");
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error viewing progress: " + e.getMessage());
-        }
-    }
-
-    // CORRIGIDO: Gerenciar attendance ativo
-    private static void registerEntry() {
-        try {
-            System.out.println("\n--- Register Entry ---");
-            currentAttendance = new Attendance();
-            member.registerEntry(currentAttendance);
-            System.out.println("✓ Entry registered at " + LocalTime.now());
-        } catch (IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error registering entry: " + e.getMessage());
-        }
-    }
-
-    // CORRIGIDO: Usar attendance ativo
-    private static void registerExit() {
-        try {
-            System.out.println("\n--- Register Exit ---");
-            if (currentAttendance == null) {
-                System.out.println("Error: No active entry found. Please register entry first.");
-                return;
-            }
-            member.registerExit(currentAttendance);
-            System.out.println("✓ Exit registered at " + LocalTime.now());
-            System.out.println("✓ Total time: " + String.format("%.2f", currentAttendance.calculateHours()) + " hours");
-            currentAttendance = null; // Reset after exit
-        } catch (IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error registering exit: " + e.getMessage());
-        }
-    }
-
-    private static void updateMemberProfile() {
-        try {
-            System.out.println("\n--- Update Profile ---");
-            System.out.print("New Email (or press Enter to skip): ");
-            String email = scanner.nextLine();
-            System.out.print("New Phone (or press Enter to skip): ");
-            String phone = scanner.nextLine();
-
-            member.updateProfile(email.isEmpty() ? null : email,
-                    phone.isEmpty() ? null : phone);
-            System.out.println("✓ Profile updated successfully!");
-        } catch (Exception e) {
-            System.out.println("Error updating profile: " + e.getMessage());
-        }
-    }
-
-    // ===== GYM MENU =====
-    private static void gymMenu() {
-        boolean back = false;
-        while (!back) {
-            try {
-                System.out.println("\n--- Gym Operations ---");
-                System.out.println("1. View Gym Info");
-                System.out.println("2. List All Instructors");
-                System.out.println("3. List All Members");
-                System.out.println("4. List All Equipment");
-                System.out.println("5. Find Member by Name");
-                System.out.println("6. Find Instructor by Name");
-                System.out.println("0. Back to Main Menu");
-                System.out.print("Select option: ");
-
-                int choice = getIntInput();
-
-                switch (choice) {
-                    case 1 -> gym.viewGymInfo();
-                    case 2 -> listAllInstructors();
-                    case 3 -> listAllMembers();
-                    case 4 -> listAllEquipment();
-                    case 5 -> findMemberByName();
-                    case 6 -> findInstructorByName();
-                    case 0 -> back = true;
-                    default -> System.out.println("Invalid option.");
-                }
-            } catch (Exception e) {
-                System.out.println("Error in gym menu: " + e.getMessage());
-                scanner.nextLine();
-            }
-        }
-    }
-
-    private static void listAllInstructors() {
-        try {
-            System.out.println("\n--- All Instructors ---");
-            if (gym.getInstructors().isEmpty()) {
-                System.out.println("No instructors registered.");
-            } else {
-                for (Instructor i : gym.getInstructors()) {
-                    System.out.println("- ID: " + i.getId() +
-                            " | Name: " + i.getName() +
-                            " | Email: " + i.getEmail() +
-                            " | Education: " + i.getEducation());
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error listing instructors: " + e.getMessage());
-        }
-    }
-
-    private static void listAllMembers() {
-        try {
-            System.out.println("\n--- All Members ---");
-            if (gym.getMembers().isEmpty()) {
-                System.out.println("No members registered.");
-            } else {
-                for (Member m : gym.getMembers()) {
-                    System.out.println("- ID: " + m.getId() +
-                            " | Name: " + m.getName() +
-                            " | Email: " + m.getEmail());
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error listing members: " + e.getMessage());
-        }
-    }
-
-    private static void listAllEquipment() {
-        try {
-            System.out.println("\n--- All Equipment ---");
-            if (gym.getEquipments().isEmpty()) {
-                System.out.println("No equipment registered.");
-            } else {
-                for (Equipment e : gym.getEquipments()) {
-                    System.out.println("- Name: " + e.getName() +
-                            " | Description: " + e.getDescription());
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("Error listing equipment: " + e.getMessage());
-        }
-    }
-
-    private static void findMemberByName() {
-        try {
-            System.out.print("Enter member name: ");
-            String name = scanner.nextLine();
-            Member found = gym.findMemberByName(name);
-            if (found != null) {
-                System.out.println("✓ Found: " + found.getName() + " | " + found.getEmail());
-            } else {
-                System.out.println("Member not found.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error finding member: " + e.getMessage());
-        }
-    }
-
-    private static void findInstructorByName() {
-        try {
-            System.out.print("Enter instructor name: ");
-            String name = scanner.nextLine();
-            Instructor found = gym.findInstructorByName(name);
-            if (found != null) {
-                System.out.println("✓ Found: " + found.getName() + " | " + found.getEmail());
-            } else {
-                System.out.println("Instructor not found.");
-            }
-        } catch (Exception e) {
-            System.out.println("Error finding instructor: " + e.getMessage());
-        }
-    }
-
-    // ===== EQUIPMENT MENU =====
-    private static void equipmentMenu() {
-        try {
-            System.out.println("\n--- Equipment Operations ---");
-            System.out.println("1. Add New Equipment");
-            System.out.println("2. Update Equipment Data");
-            System.out.println("0. Back to Main Menu");
-            System.out.print("Select option: ");
+            System.out.println("\n===================================================");
+            System.out.println("--- MENU ALUNO - EXERCITEAKI ---");
+            System.out.println("===================================================");
+            System.out.println("Aluno: " + currentMember.getName());
+            System.out.println("---------------------------------------------------");
+            System.out.println("1. Consultar Meu Treino do Dia");
+            System.out.println("2. Ver Minha Evolução");
+            System.out.println("3. Registrar Entrada (Check-in)");
+            System.out.println("4. Registrar Saída (Check-out)");
+            System.out.println("5. Ver Meu Relatório de Frequência");
+            System.out.println("0. Voltar ao Menu Principal");
+            System.out.print("\nSelecione uma opção: ");
 
             int choice = getIntInput();
 
             switch (choice) {
-                case 1 -> registerEquipment();
-                case 2 -> updateEquipmentData();
+                case 1 -> viewMyTraining();
+                case 2 -> viewMyProgress();
+                case 3 -> registerEntry();
+                case 4 -> registerExit();
+                case 5 -> viewMyAttendanceReport();
+                case 0 -> back = true;
+                default -> System.out.println("Opção inválida.");
             }
-        } catch (Exception e) {
-            System.out.println("Error in equipment menu: " + e.getMessage());
         }
     }
 
-    private static void updateEquipmentData() {
+    private static void viewMyTraining() {
+        System.out.println("\n===================================================");
+        System.out.println("\n--- CONSULTAR MEU TREINO ---");
+        System.out.println("\n===================================================");
+        System.out.println("Selecione o Dia:");
+        Weekday[] days = Weekday.values();
+        for (int i = 0; i < days.length; i++) {
+            System.out.println((i + 1) + ". " + days[i]);
+        }
+        System.out.print("Escolha (1-7): ");
+        int dayChoice = getIntInput() - 1;
+
+        if (dayChoice >= 0 && dayChoice < days.length) {
+            Training training = currentMember.viewTraining(days[dayChoice]);
+            if (training != null) {
+                System.out.println("--- TREINO DE " + days[dayChoice].toString().toUpperCase() + "  ---");
+                System.out.println("Aluno: " + currentMember.getName());
+                System.out.println("Total de Exercícios: " + training.getExercises().size());
+                System.out.println("\n----------------------------------------------------------");
+
+                for (Exercise ex : training.getExercises()) {
+                    System.out.println("\n" + ex.getOrder() + ". " + ex.getEquipment().getName());
+                    System.out.println("   Carga: " + ex.getWeight() + " kg");
+                    System.out.println("   Repetições: " + ex.getRepetitions());
+                    System.out.println("   Função: " + ex.getEquipment().getFunction());
+                }
+                System.out.println("\n----------------------------------------------------------");
+            } else {
+                System.out.println("\nNenhum treino agendado para este dia.\n");
+            }
+        } else {
+            System.out.println("\nDia inválido.\n");
+        }
+    }
+
+    private static void viewMyProgress() {
+        System.out.println("\n===================================================");
+        System.out.println("--- MINHA EVOLUÇÃO - EXERCITEAKI ---");
+        System.out.println("===================================================");
+        System.out.println("\nAluno: " + currentMember.getName());
+
+        List<Progress> progressList = currentMember.viewProgress();
+
+        if (progressList.isEmpty()) {
+            System.out.println("\nNenhum registro de evolução ainda.");
+            System.out.println("Dica: Peça ao seu instrutor para registrar sua evolução.\n");
+        } else {
+            System.out.println("\nTotal de Registros: " + progressList.size());
+            System.out.println("\n----------------------------------------------------------");
+            System.out.println("Data       | Peso (kg) | Massa Muscular (%)");
+            System.out.println("----------------------------------------------------------");
+
+            for (Progress p : progressList) {
+                System.out.printf("%10s | %9.1f | %18.1f%n",
+                        p.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
+                        p.getWeight(),
+                        p.getMuscleMassPercent()
+                );
+            }
+
+            System.out.println("----------------------------------------------------------");
+        }
+    }
+
+    private static void registerEntry() {
+        System.out.println("\n===================================================");
+        System.out.println("--- REGISTRAR ENTRADA (CHECK-IN) ---");
+        System.out.println("===================================================");
+
+        Attendance attendance = new Attendance();
+        currentMember.registerEntry(attendance);
+
+        System.out.println("\nEntrada registrada com sucesso!");
+        System.out.println("Horário: " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+        System.out.println("Data: " + LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+        System.out.println("\nBom treino, " + currentMember.getName() + "!");
+    }
+
+    private static void registerExit() {
+        System.out.println("\n--- REGISTRAR SAÍDA (CHECK-OUT) ---");
+
+        List<Attendance> attendances = currentMember.viewAttendances();
+        Attendance lastAttendance = null;
+
+        // Procura última entrada sem saída
+        for (int i = attendances.size() - 1; i >= 0; i--) {
+            Attendance a = attendances.get(i);
+            if (a.getExitTime() == null) {
+                lastAttendance = a;
+                break;
+            }
+        }
+
+        if (lastAttendance == null) {
+            System.out.println("\nNenhuma entrada ativa encontrada!");
+            System.out.println("Registre a entrada antes de registrar a saída.\n");
+            return;
+        }
+
+        currentMember.registerExit(lastAttendance);
+
+        System.out.println("\nSaída registrada com sucesso!");
+        System.out.println("Horário: " + LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+
         try {
-            System.out.println("\n--- Update Equipment ---");
-            listAllEquipment();
-            System.out.print("\nEquipment Name: ");
-            String name = scanner.nextLine();
+            double hours = lastAttendance.calculateHours();
+            System.out.println("Tempo na academia: " + String.format("%.2f", hours) + " horas");
+        } catch (Exception e) {
+            System.out.println("Erro ao calcular tempo.");
+        }
 
-            for (Equipment e : gym.getEquipments()) {
-                if (e.getName().equalsIgnoreCase(name)) {
-                    System.out.print("New Description: ");
-                    String desc = scanner.nextLine();
-                    System.out.print("New Function: ");
-                    String func = scanner.nextLine();
+        System.out.println("\nAté a próxima, " + currentMember.getName() + "!");
+    }
 
-                    e.updateData(desc, func);
-                    System.out.println("✓ Equipment updated successfully!");
-                    return;
+    private static void viewMyAttendanceReport() {
+        System.out.println("\n--- RELATÓRIO DE FREQUÊNCIA ---");
+        System.out.println("1. Ver Últimas 10 Visitas");
+        System.out.println("2. Ver Período Específico");
+        System.out.print("Escolha: ");
+
+        int choice = getIntInput();
+
+        if (choice == 1) {
+            generateLast10AttendancesReport();
+        } else if (choice == 2) {
+            generatePeriodAttendanceReport();
+        } else {
+            System.out.println("\nOpção inválida.\n");
+        }
+    }
+
+    private static void generateLast10AttendancesReport() {
+        System.out.println("\n===================================================");
+        System.out.println("--- ÚLTIMAS VISITAS - EXERCITEAKI ---");
+        System.out.println("===================================================");
+        System.out.println("Aluno: " + currentMember.getName());
+
+        List<Attendance> attendances = currentMember.viewAttendances();
+
+        if (attendances.isEmpty()) {
+            System.out.println("\nNenhum registro de frequência ainda.\n");
+            return;
+        }
+
+        System.out.println("\n----------------------------------------------------------");
+        System.out.println("Data       | Entrada  | Saída    | Horas");
+        System.out.println("----------------------------------------------------------");
+
+        int count = 0;
+        for (int i = attendances.size() - 1; i >= 0 && count < 10; i--, count++) {
+            Attendance a = attendances.get(i);
+
+            String dateStr = a.getDate() != null ?
+                    a.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) : "N/A";
+            String entryStr = a.getEntryTime() != null ?
+                    a.getEntryTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "N/A";
+            String exitStr = a.getExitTime() != null ?
+                    a.getExitTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "---";
+
+            String hoursStr;
+            try {
+                if (a.getExitTime() != null) {
+                    hoursStr = String.format("%.2f", a.calculateHours());
+                } else {
+                    hoursStr = "Em andamento";
+                }
+            } catch (Exception e) {
+                hoursStr = "Erro";
+            }
+
+            System.out.printf("%10s | %8s | %8s | %s%n", dateStr, entryStr, exitStr, hoursStr);
+        }
+
+        System.out.println("----------------------------------------------------------");
+    }
+
+    private static void generatePeriodAttendanceReport() {
+        System.out.println("\n===================================================");
+        System.out.println("\n--- RELATÓRIO POR PERÍODO ---");
+        System.out.println("\n===================================================");
+        System.out.print("Data Inicial (dd/mm/aaaa): ");
+        String startDateStr = scanner.nextLine().trim();
+
+        System.out.print("Data Final (dd/mm/aaaa): ");
+        String endDateStr = scanner.nextLine().trim();
+
+        try {
+            LocalDate startDate = LocalDate.parse(startDateStr, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+            LocalDate endDate = LocalDate.parse(endDateStr, DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+
+            if (startDate.isAfter(endDate)) {
+                System.out.println("\nData inicial não pode ser maior que data final!\n");
+                return;
+            }
+
+            List<Attendance> allAttendances = currentMember.viewAttendances();
+            List<Attendance> filteredAttendances = new ArrayList<>();
+            double totalHours = 0;
+
+            for (Attendance a : allAttendances) {
+                if (a.getDate() != null &&
+                        !a.getDate().isBefore(startDate) &&
+                        !a.getDate().isAfter(endDate)) {
+                    filteredAttendances.add(a);
+                    try {
+                        if (a.getExitTime() != null) {
+                            totalHours += a.calculateHours();
+                        }
+                    } catch (Exception e) {
+                        // vai ignora registros incompletos
+                    }
                 }
             }
-            System.out.println("Equipment not found.");
-        } catch (Exception e) {
-            System.out.println("Error updating equipment: " + e.getMessage());
-        }
-    }
+            System.out.println("\n===================================================");
+            System.out.println("--- RELATÓRIO DE FREQUÊNCIA - EXERCITEAKI ---");
+            System.out.println("\n===================================================");
+            System.out.println("Aluno: " + currentMember.getName());
+            System.out.println("Período: " + startDateStr + " a " + endDateStr);
+            System.out.println("\n----------------------------------------------------------");
+            System.out.println("TOTAL DE COMPARECIMENTOS: " + filteredAttendances.size());
+            System.out.println("TOTAL DE HORAS NO PERÍODO: " + String.format("%.2f", totalHours) + "h");
 
-    // ===== ATTENDANCE MENU =====
-    private static void attendanceMenu() {
-        try {
-            System.out.println("\n--- Attendance Test ---");
-            System.out.println("1. Test Full Attendance Flow");
-            System.out.println("0. Back to Main Menu");
-            System.out.print("Select option: ");
+            if (!filteredAttendances.isEmpty()) {
+                System.out.println("\n----------------------------------------------------------");
+                System.out.println("Data       | Entrada  | Saída    | Horas");
+                System.out.println("----------------------------------------------------------");
 
-            int choice = getIntInput();
+                for (Attendance a : filteredAttendances) {
+                    String dateStr = a.getDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                    String entryStr = a.getEntryTime() != null ?
+                            a.getEntryTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "N/A";
+                    String exitStr = a.getExitTime() != null ?
+                            a.getExitTime().format(DateTimeFormatter.ofPattern("HH:mm")) : "---";
 
-            if (choice == 1) {
-                testAttendanceFlow();
+                    String hoursStr;
+                    try {
+                        if (a.getExitTime() != null) {
+                            hoursStr = String.format("%.2f", a.calculateHours());
+                        } else {
+                            hoursStr = "Incompleto";
+                        }
+                    } catch (Exception e) {
+                        hoursStr = "Erro";
+                    }
+
+                    System.out.printf("%10s | %8s | %8s | %s%n", dateStr, entryStr, exitStr, hoursStr);
+                }
             }
-        } catch (Exception e) {
-            System.out.println("Error in attendance menu: " + e.getMessage());
-        }
-    }
 
-    private static void testAttendanceFlow() {
-        try {
-            System.out.println("\n--- Testing Attendance Flow ---");
-            Attendance att = new Attendance();
+            System.out.println("----------------------------------------------------------");
 
-            System.out.println("Registering entry...");
-            att.registerEntry();
-
-            System.out.println("Waiting 2 seconds...");
-            Thread.sleep(2000);
-
-            System.out.println("Registering exit...");
-            att.registerExit();
-
-            System.out.println("✓ Calculating hours: " + String.format("%.2f", att.calculateHours()) + " hours");
-        } catch (InterruptedException e) {
-            System.out.println("Error: Test interrupted.");
-            Thread.currentThread().interrupt();
-        } catch (IllegalStateException e) {
-            System.out.println("Error: " + e.getMessage());
-        } catch (Exception e) {
-            System.out.println("Error in attendance flow: " + e.getMessage());
-        }
-    }
-
-    // ===== UTILITY METHODS =====
-    private static int getIntInput() {
-        while (!scanner.hasNextInt()) {
-            System.out.print("Invalid input. Enter a number: ");
-            scanner.next();
-        }
-        int input = scanner.nextInt();
-        scanner.nextLine();
-        return input;
-    }
-
-    // CORRIGIDO: Aceitar vírgula ou ponto
-    private static double getDoubleInput() {
-        while (true) {
-            try {
-                String input = scanner.nextLine().replace(',', '.');
-                return Double.parseDouble(input);
-            } catch (NumberFormatException e) {
-                System.out.print("Invalid input. Enter a number: ");
-            }
+        } catch (DateTimeParseException e) {
+            System.out.println("\nFormato de data inválido! Use dd/mm/aaaa\n");
         }
     }
 }

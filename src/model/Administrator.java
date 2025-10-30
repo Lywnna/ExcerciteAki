@@ -1,13 +1,16 @@
 package model;
 
 public class Administrator extends User {
-    
+
     public Administrator(String name, String email, String phone, String password) {
-		super(name, email, phone, password);
-	}
-    
-    // Métodos para cadastrar
-	public void registerGym(Gym gym, Address address) {
+        super(name, email, phone, password);
+    }
+
+    public Administrator(long id, String name, String email, String phone, String password) {
+        super(id, name, email, phone, password);
+    }
+
+    public void registerGym(Gym gym, Address address) {
         if (gym == null || address == null) {
             throw new IllegalArgumentException("Gym or Address cannot be null");
         }
@@ -44,8 +47,6 @@ public class Administrator extends User {
         gym.getEquipments().add(equipment);
     }
 
-    // Métodos para remover
-    
     public void removeInstructor(Gym gym, Instructor instructor) {
         if (gym == null || instructor == null) {
             throw new IllegalArgumentException("Parameters cannot be null");
@@ -55,7 +56,7 @@ public class Administrator extends User {
         }
         gym.getInstructors().remove(instructor);
     }
-    
+
     public void removeMember(Gym gym, Member member) {
         if (gym == null || member == null) {
             throw new IllegalArgumentException("Parameters cannot be null");
@@ -76,8 +77,6 @@ public class Administrator extends User {
         gym.getEquipments().remove(equipment);
     }
 
-    // Métodos para atualizar
-    
     public void updateGymInfo(Gym gym, String name, String phone, String website) {
         if (gym == null) {
             throw new IllegalArgumentException("Gym cannot be null");

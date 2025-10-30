@@ -1,5 +1,6 @@
 package Database;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Table {
@@ -9,7 +10,8 @@ public class Table {
     private final List<List<String>> Rows;
 
     public Table(String name, List<String> header, List<List<String>> rows) {
-        Path = System.getProperty("java.home") + name + ".csv";
+        // CORRIGIDO: Caminho relativo ao projeto
+        Path = "src/Tables/" + name + ".csv";
         Name = name;
         Header = header;
         Rows = rows;
@@ -35,7 +37,40 @@ public class Table {
     public void DeleteHeader(int index){
         Header.remove(index);
     }
+
     public void DeleteHeader(String header){
-        Header.remove(header.indexOf(header));
+        int idx = Header.indexOf(header);
+        if (idx != -1) {
+            Header.remove(idx);
+            // Remover a coluna de todas as linhas
+            for (List<String> row : Rows) {
+                if (idx < row.size()) {
+                    row.remove(idx);
+                }
+            }
+        }
+    }
+
+    // NOVO: Adicionar linha
+    public void AddRow(List<String> row) {
+        if (row.size() == Header.size()) {
+            Rows.add(new ArrayList<>(row));
+        } else {
+            throw new IllegalArgumentException("Row size doesn't match header size");
+        }
+    }
+
+    public void log(){
+        for (String col : Header) {
+            System.out.print(col + " | "); // CORRIGIDO: print ao invés de println
+        }
+        System.out.println(); // Nova linha após header
+
+        for (List<String> row : Rows) {
+            for(String r : row) {
+                System.out.print(r + " | "); // CORRIGIDO: print ao invés de println
+            }
+            System.out.println(); // Nova linha após cada row
+        }
     }
 }

@@ -1,42 +1,82 @@
 package model;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Member extends User {
-
     private LocalDate birthDate;
     private double height;
-    private List<Training> trainings = new ArrayList<>();
-    private List<Progress> progresses = new ArrayList<>();
-    private List<Attendance> attendances = new ArrayList<>();
+    private List<Progress> progressList;
+    private List<Attendance> attendances;
+    private Map<Weekday, Training> trainings;
 
     public Member(String name, String email, String phone, String password) {
         super(name, email, phone, password);
+        this.progressList = new ArrayList<>();
+        this.attendances = new ArrayList<>();
+        this.trainings = new HashMap<>();
+    }
+
+    public Member(long id, String name, String email, String phone, String password) {
+        super(id, name, email, phone, password);
+        this.progressList = new ArrayList<>();
+        this.attendances = new ArrayList<>();
+        this.trainings = new HashMap<>();
+    }
+
+    public void addTraining(Weekday day, Training training) {
+        if (day == null || training == null) {
+            throw new IllegalArgumentException("Day and training cannot be null");
+        }
+        trainings.put(day, training);
     }
 
     public Training viewTraining(Weekday day) {
-        for (Training t : trainings) {
-            if (t.getWeekDay() == day) return t;
+        return trainings.get(day);
+    }
+
+    public void addProgress(Progress progress) {
+        if (progress == null) {
+            throw new IllegalArgumentException("Progress cannot be null");
         }
-        return null;
+        progressList.add(progress);
     }
 
     public List<Progress> viewProgress() {
-        return progresses;
+        return new ArrayList<>(progressList);
     }
 
-    // NOVOS MÉTODOS PARA USAR A LISTA DE ATTENDANCES
-    public List<Attendance> viewAttendances() {
-        return attendances;
-    }
-
-    public Attendance getLastAttendance() {
-        if (attendances.isEmpty()) {
-            return null;
+    public void addAttendance(Attendance attendance) {
+        if (attendance == null) {
+            throw new IllegalArgumentException("Attendance cannot be null");
         }
-        return attendances.get(attendances.size() - 1);
+        attendances.add(attendance);
+    }
+
+    public void registerEntry(Attendance attendance) {
+        if (attendance == null) {
+            throw new IllegalArgumentException("Attendance cannot be null");
+        }
+        attendance.recordEntry();
+        attendances.add(attendance);
+    }
+
+    public void registerExit(Attendance attendance) {
+        if (attendance == null) {
+            throw new IllegalArgumentException("Attendance cannot be null");
+        }
+        if (!attendances.contains(attendance)) {
+            throw new IllegalStateException("Attendance record not found for this member");
+        }
+        attendance.recordExit();
+    }
+
+    public List<Attendance> viewAttendances() {
+        return new ArrayList<>(attendances);
     }
 
     public int getTotalAttendances() {
@@ -44,37 +84,29 @@ public class Member extends User {
     }
 
     public double getTotalHoursThisMonth() {
-        double total = 0;
         LocalDate now = LocalDate.now();
+        double totalHours = 0;
+
         for (Attendance a : attendances) {
             if (a.getDate() != null &&
                     a.getDate().getMonth() == now.getMonth() &&
                     a.getDate().getYear() == now.getYear()) {
                 try {
-                    total += a.calculateHours();
+                    totalHours += a.calculateHours();
                 } catch (Exception e) {
-                    // Skip invalid attendances
+                    // ignora
                 }
             }
         }
-        return total;
+
+        return totalHours;
     }
 
-    public void registerEntry(Attendance a) {
-        attendances.add(a);
-        a.registerEntry();
-    }
-
-    public void registerExit(Attendance a) {
-        a.registerExit();
-    }
-
-    public void addTraining(Training training) {
-        trainings.add(training);
-    }
-
-    public void addProgress(Progress progress) {
-        progresses.add(progress);
+    public long getAge() {
+        if (birthDate == null) {
+            return 0;
+        }
+        return ChronoUnit.YEARS.between(birthDate, LocalDate.now());
     }
 
     public LocalDate getBirthDate() {
@@ -90,6 +122,25 @@ public class Member extends User {
     }
 
     public void setHeight(double height) {
+        if (height <= 0) {
+            throw new IllegalArgumentException("Height must be positive");
+        }
         this.height = height;
+    }
+
+    public List<Progress> getProgressList() {
+        return new ArrayList<>(progressList);
+    }
+
+    public List<Attendance> getAttendances() {
+        return new ArrayList<>(attendances);
+    }
+
+    public Map<Weekday, Training> getTrainings() {
+        return new HashMap<>(trainings);
+    }
+
+    public void setTrainings(Map<Weekday, Training> trainings) {
+        this.trainings = trainings != null ? new HashMap<>(trainings) : new HashMap<>();
     }
 }
