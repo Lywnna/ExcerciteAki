@@ -1,7 +1,6 @@
-id;training_id;equipment_name;weight;repetitions;order
-1;1;Esteira;12.0;12;1
-2;1;Leg Press;50.0;12;2
-3;1;Esteira;12.0;12;1
-4;1;Leg Press;50.0;12;2
-5;2;Leg Press;50.0;12;1
-6;2;Supino Inclinado;45.0;12;2
+memberId;weekday;order;equipmentName;weight;repetitions3;Monday;2;Supino;45.00;10
+3;Tuesday;2;Supino;45.00;10
+4;Monday;1;Leg Press;50.00;12
+4;Monday;2;Supino;45.00;12
+4;Tuesday;1;Supino;50.00;12
+4;Tuesday;3;Supino Reto;54.00;12

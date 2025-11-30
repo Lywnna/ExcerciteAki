@@ -1,6 +1,6 @@
-id;name;description;function
-1;Esteira;Equipamento de cardio;Corrida e caminhada
-2;Leg Press;Equipamento para pernas;Fortalecimento de pernas
-3;Supino;Equipamento para peito;Fortalecimento de peitoral
-4;Supino Reto;Equipamento para peito;Fortalecimento do peitoral
-5;Supino Inclinado;Equipamento para peito;Fortalecimento do peitoral
+name;description;function
+Leg Press;Equipamento para pernas;Perna
+Supino;Equipamento para peito;Peito
+Supino Reto;Equipamento para peito;Peito
+Supino Inclinado;Equipamento para peito;Peito
+Triceps;Treino para triceps;Braço

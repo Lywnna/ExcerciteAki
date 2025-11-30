@@ -1,4 +1,4 @@
-package Database;
+package database;
 
 import model.*;
 import java.io.IOException;

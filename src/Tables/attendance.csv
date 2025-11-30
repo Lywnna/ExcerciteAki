@@ -1,1 +1,4 @@
-id;member_id;member_name;date;entry_time;exit_time
+memberId;date;entryTime;exitTime
+3;30/11/2025;03:49:00;03:50:56
+3;30/11/2025;16:07:22;16:07:25
+4;30/11/2025;16:18:27;16:18:47

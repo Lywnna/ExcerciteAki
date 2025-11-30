@@ -32,11 +32,11 @@ public class Member extends User {
         if (day == null || training == null) {
             throw new IllegalArgumentException("Day and training cannot be null");
         }
-        trainings.put(day, training);
+        getTrainings().put(day, training);
     }
 
     public Training viewTraining(Weekday day) {
-        return trainings.get(day);
+        return getTrainings().get(day);
     }
 
     public void addProgress(Progress progress) {
@@ -47,7 +47,7 @@ public class Member extends User {
     }
 
     public List<Progress> viewProgress() {
-        return new ArrayList<>(progressList);
+        return progressList;
     }
 
     public void addAttendance(Attendance attendance) {
@@ -76,7 +76,7 @@ public class Member extends User {
     }
 
     public List<Attendance> viewAttendances() {
-        return new ArrayList<>(attendances);
+        return attendances;
     }
 
     public int getTotalAttendances() {
@@ -129,18 +129,21 @@ public class Member extends User {
     }
 
     public List<Progress> getProgressList() {
-        return new ArrayList<>(progressList);
+        return progressList;
     }
 
     public List<Attendance> getAttendances() {
-        return new ArrayList<>(attendances);
+        return attendances;
     }
 
     public Map<Weekday, Training> getTrainings() {
-        return new HashMap<>(trainings);
+        if (trainings == null) {
+            trainings = new HashMap<>();
+        }
+        return trainings;
     }
 
     public void setTrainings(Map<Weekday, Training> trainings) {
-        this.trainings = trainings != null ? new HashMap<>(trainings) : new HashMap<>();
+        this.trainings = (trainings != null) ? trainings : new HashMap<>();
     }
 }

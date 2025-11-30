@@ -130,6 +130,7 @@ public class Gym {
     public String getWebsite() { return website; }
     public void setWebsite(String website) { this.website = website; }
     public Map<Weekday, Schedule> getOperatingHours() { return operatingHours; }
+    public void setOperatingHours(Map<Weekday, Schedule> operatingHours) {this.operatingHours = operatingHours;}
     public List<Instructor> getInstructors() { return instructors; }
     public List<Member> getMembers() { return members; }
     public List<Equipment> getEquipments() { return equipments; }

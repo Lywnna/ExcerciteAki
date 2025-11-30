@@ -1,4 +1,4 @@
-package Database;
+package database;
 
 public class Condition {
     private String header;
