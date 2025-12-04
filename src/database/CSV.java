@@ -1,4 +1,4 @@
-package Database;
+package database;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -12,7 +12,7 @@ public class CSV {
 
     private static final String Delimiter = ";";
 
-    public static boolean WriteToTable(Table data) throws IOException {
+    public static void WriteToTable(Table data) throws IOException {
         if (data == null || data.getHeader() == null)
             throw new NullPointerException("Data is null");
 
@@ -25,26 +25,26 @@ public class CSV {
 
         BufferedWriter writer = new BufferedWriter(new FileWriter(data.getPath()));
         writer.write(csvBuilder.toString());
-
-        return true;
+        writer.close();
     }
 
     public static Table ReadTable(String tableName) throws IOException
     {
-        BufferedReader br = new BufferedReader(new FileReader(tableName));
+        String filePath = "src/Tables/" + tableName + ".csv";
+
+        BufferedReader br = new BufferedReader(new FileReader(filePath));
 
         String line;
         List<String> header = new ArrayList<>();
         List<List<String>> rows = new ArrayList<>();
-
 
         boolean isHeader = true;
         while ((line = br.readLine()) != null) {
             if (line.trim().isEmpty()) continue;
 
             List<String> cells = Arrays.stream(line.split(Delimiter))
-                .map(String::trim)
-                .collect(Collectors.toList());
+                    .map(String::trim)
+                    .collect(Collectors.toList());
 
             if (isHeader) {
                 header = cells;
@@ -52,7 +52,8 @@ public class CSV {
             } else rows.add(cells);
         }
 
-        return new Table(tableName, header, rows);
+        br.close();
 
+        return new Table(tableName, header, rows);
     }
 }

@@ -13,7 +13,6 @@ public class Gym {
     private List<Member> members = new ArrayList<>();
     private List<Equipment> equipments = new ArrayList<>();
 
-    // Métodos para cadastrar
     public boolean registerInstructor(Instructor instructor) {
         if (instructor == null) {
             throw new IllegalArgumentException("Instructor cannot be null");
@@ -44,7 +43,6 @@ public class Gym {
         return equipments.add(equipment);
     }
 
-    // Métodos para remover
     public boolean removeInstructor(Instructor instructor) {
         if (instructor == null) return false;
         return instructors.remove(instructor);
@@ -59,8 +57,7 @@ public class Gym {
         if (equipment == null) return false;
         return equipments.remove(equipment);
     }
-    
-    // Métodos para atualizar
+
     public void updateGymInfo(String name, String phone, String website) {
         if (name != null && !name.trim().isEmpty()) this.name = name;
         if (phone != null && !phone.trim().isEmpty()) this.phone = phone;
@@ -71,7 +68,6 @@ public class Gym {
         if (address != null) this.address = address;
     }
 
-    // Métodos de pesquisa
     public Member findMemberByName(String name) {
         for (Member m : members) {
             if (m.getName().equalsIgnoreCase(name)) return m;
@@ -86,12 +82,43 @@ public class Gym {
         return null;
     }
 
-    // Define horário
     public void setSchedule(Weekday day, Schedule s) { operatingHours.put(day, s); }
-    
-    // Visualizar infos
+
     public void viewGymInfo() {
-        System.out.println("Gym: " + name + " | Phone: " + phone + " | Website: " + website + " | Opening hours: " + operatingHours);
+        System.out.println("--- INFORMAÇÕES DA ACADEMIA ---");
+        System.out.println("Nome: " + name);
+        System.out.println("Telefone: " + phone);
+        System.out.println("Website: " + website);
+
+        if (address != null) {
+            System.out.println("\n--- ENDEREÇO ---");
+            System.out.println("Rua: " + address.getStreet() + ", " + address.getNumber());
+            System.out.println("Bairro: " + address.getNeighborhood());
+            System.out.println("Cidade: " + address.getCity() + " - " + address.getState());
+            System.out.println("CEP: " + address.getZipCode());
+        }
+
+        System.out.println("\n--- HORÁRIOS DE FUNCIONAMENTO ---");
+        if (operatingHours.isEmpty()) {
+            System.out.println("Nenhum horário cadastrado.");
+            System.out.println("Use a opção 2 do menu para cadastrar!");
+        } else {
+            for (Weekday day : Weekday.values()) {
+                Schedule schedule = operatingHours.get(day);
+                if (schedule != null) {
+                    System.out.printf("%s: %s - %s%n",
+                            day,
+                            schedule.getOpeningTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")),
+                            schedule.getClosingTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+                    );
+                }
+            }
+        }
+
+        System.out.println("\n--- ESTATÍSTICAS ---");
+        System.out.println("Total de Instrutores: " + instructors.size());
+        System.out.println("Total de Alunos: " + members.size());
+        System.out.println("Total de Aparelhos: " + equipments.size());
     }
 
     public String getName() { return name; }
@@ -103,6 +130,7 @@ public class Gym {
     public String getWebsite() { return website; }
     public void setWebsite(String website) { this.website = website; }
     public Map<Weekday, Schedule> getOperatingHours() { return operatingHours; }
+    public void setOperatingHours(Map<Weekday, Schedule> operatingHours) {this.operatingHours = operatingHours;}
     public List<Instructor> getInstructors() { return instructors; }
     public List<Member> getMembers() { return members; }
     public List<Equipment> getEquipments() { return equipments; }
