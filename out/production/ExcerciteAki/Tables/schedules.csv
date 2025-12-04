@@ -1,8 +1,8 @@
 weekday;openingTime;closingTime
 Saturday;08:00:00;18:00:00
-Thursday;06:00:00;22:00:00
-Monday;06:00:00;22:00:00
-Tuesday;06:00:00;22:00:00
-Wednesday;06:00:00;22:00:00
 Sunday;08:00:00;14:00:00
 Friday;06:00:00;22:00:00
+Tuesday;06:00:00;22:00:00
+Wednesday;06:00:00;22:00:00
+Monday;06:00:00;22:00:00
+Thursday;06:00:00;22:00:00

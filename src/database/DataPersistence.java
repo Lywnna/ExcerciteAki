@@ -468,7 +468,7 @@ public class DataPersistence {
             File file = new File(EXERCISES_FILE);
             file.getParentFile().mkdirs();
             PrintWriter writer = new PrintWriter(new FileWriter(file));
-            writer.printf(java.util.Locale.US, "memberId;weekday;order;equipmentName;weight;repetitions");
+            writer.printf(java.util.Locale.US, "memberId;weekday;order;equipmentName;weight;repetitions%n");
 
             for (Member member : members) {
                 Map<Weekday, Training> trainings = member.getTrainings();

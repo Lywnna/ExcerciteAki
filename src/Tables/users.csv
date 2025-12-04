@@ -1,5 +1,0 @@
-id;name;email;phone;password;user_type;education
-1;Admin Sistema;admin@exerciteaki.com;(54) 3220-0001;admin123;administrator;N/A
-2;Andrei Ribeiro;a@a.com;(54) 999600411;a123;member;N/A
-3;Ariele;ar@ar.com;343434;a123;instructor;Educação Física
-4;Pedro;p@p.com;5454454;a123;member;N/A
