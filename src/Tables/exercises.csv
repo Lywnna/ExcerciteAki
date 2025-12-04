@@ -1,4 +1,8 @@
-2memberId;weekday;order;equipmentName;weight;repetitions
+memberId;weekday;order;equipmentName;weight;repetitions
 3;Monday;1;Leg Press;40.00;21
 3;Monday;2;Supino Reto;45.00;12
 3;Monday;3;Triceps;43.00;12
+4;Monday;1;Leg Press;10.00;10
+4;Tuesday;1;Leg Press;50.00;12
+4;Tuesday;2;Supino Inclinado;50.00;13
+4;Tuesday;3;Agachamento Livre;43.00;12
